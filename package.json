@@ -1,7 +1,7 @@
 {
   "name": "receive-kit",
   "version": "1.0.0",
-  "description": "Easily receive and validate data from users sharing their data via share-kit.",
+  "description": "Easily receive and validate data from share-kit.",
   "dependencies": {
     "@bloomprotocol/attestations-lib": "^3.0.2",
     "@bloomprotocol/share-kit": "^3.0.0",
