@@ -1,11 +1,18 @@
 import express from "express";
+import { HashingLogic } from "@bloomprotocol/attestations-lib";
+import { ResponseData, util as shareKitUtil } from "@bloomprotocol/share-kit";
+import { toBuffer } from "@bloomprotocol/share-kit/dist/src/util";
+import { IVerifiedData } from "@bloomprotocol/share-kit/dist/src/types";
+import { keccak256 } from "js-sha3";
+import _ from "lodash";
+import {
+  TDecodedLog,
+  getDecodedTxEventLogs,
+  getDecodedLogValueByName
+} from "./txUtils";
+
 import * as dotenv from "dotenv";
 dotenv.config();
-import { ResponseData, util as shareKitUtil } from "@bloomprotocol/share-kit";
-import { HashingLogic } from "@bloomprotocol/attestations-lib";
-import { toBuffer } from "@bloomprotocol/share-kit/dist/src/util";
-import { keccak256 } from "js-sha3";
-import * as _ from "lodash";
 
 // Implementation from http://whitfin.io/sorting-object-recursively-node-jsjavascript/
 function sortObject<T>(object: any): T {
@@ -112,51 +119,146 @@ const validateBasicOffChainProperties = (shareKitResData: ResponseData) => {
   return errors;
 };
 
+type TDecodedLogsAndData = {
+  shareData: IVerifiedData;
+  logs: TDecodedLog[];
+};
+type TOnChainValidationError = {
+  key: "TraitAttested" | "subject" | "attester" | "layer2Hash";
+  message: string;
+};
+
+const validateOnChainProperties = (
+  subject: string,
+  decodedLogsAndData: TDecodedLogsAndData[]
+) => {
+  const errors: TOnChainValidationError[] = [];
+
+  decodedLogsAndData.forEach(dl => {
+    const traitAttestedLogs = dl.logs.find(l => l.name === "TraitAttested");
+    if (!traitAttestedLogs) {
+      errors.push({
+        key: "TraitAttested",
+        message: "TODO"
+      });
+      return;
+    }
+
+    // verify subject address matches chain
+    const onChainSubjectAddress = getDecodedLogValueByName(
+      traitAttestedLogs,
+      "subject"
+    );
+    if (subject !== onChainSubjectAddress) {
+      errors.push({
+        key: "subject",
+        message: "TODO"
+      });
+    }
+
+    // verify subject shared attester matches chain
+    const onChainAttesterAddress = getDecodedLogValueByName(
+      traitAttestedLogs,
+      "attester"
+    );
+    if (dl.shareData.attester !== onChainAttesterAddress) {
+      errors.push({
+        key: "attester",
+        message: "TODO"
+      });
+    }
+
+    // verify subject shared dataHash matches chain
+    const onChainDataHash = getDecodedLogValueByName(
+      traitAttestedLogs,
+      "dataHash"
+    );
+    if (dl.shareData.layer2Hash !== onChainDataHash) {
+      errors.push({
+        key: "layer2Hash",
+        message: "TODO"
+      });
+    }
+  });
+
+  return errors;
+};
+
 const app = express();
 const port = process.env.PORT;
 if (!port) {
   throw Error("Missing required PORT environment variable");
 }
+const provider = process.env.WEB3_PROVIDER;
+if (!provider) {
+  throw Error("Missing required WEB3_PROVIDER environment variable");
+}
 
 app.listen(port, () => console.log(`Express server running on port ${port}`));
 app.use(express.json());
 
-app.post("/api/receive", (req: express.Request, res: express.Response) => {
-  // Ensure the structure of the JSON is formatted properly
-  const reqFormatValidation = validateRequestFormat(req);
-  if (reqFormatValidation.length) {
-    return res.status(400).json({ errors: reqFormatValidation });
-  }
+app.post(
+  "/api/receive",
+  async (req: express.Request, res: express.Response) => {
+    // Ensure the structure of the JSON is formatted properly
+    const reqFormatValidation = validateRequestFormat(req);
+    if (reqFormatValidation.length) {
+      return res.status(400).json({ errors: reqFormatValidation });
+    }
 
-  const shareKitResData: ResponseData = sortObject(req.body);
-  shareKitResData.data = shareKitResData.data.map(d => sortObject(d));
+    const shareKitResData: ResponseData = sortObject(req.body);
+    shareKitResData.data = shareKitResData.data.map(d => sortObject(d));
 
-  // Validate the integrity of basic off-chain properties (subject, packedData)
-  const basicOffChainValidation = validateBasicOffChainProperties(
-    shareKitResData
-  );
-  if (basicOffChainValidation.length) {
-    return res.status(400).json({
-      errors: basicOffChainValidation
+    // Validate the integrity of basic off-chain properties (subject, packedData)
+    const basicOffChainValidation = validateBasicOffChainProperties(
+      shareKitResData
+    );
+    if (basicOffChainValidation.length) {
+      return res.status(400).json({
+        errors: basicOffChainValidation
+      });
+    }
+
+    // Verify the off-chain data integrity of each data node
+    const offChainVerifications = shareKitResData.data.map(d => ({
+      layer2Hash: d.layer2Hash,
+      errors: shareKitUtil.verifyOffChainDataIntegrity(d)
+    }));
+    const hasOffChainVerificationErrors = !offChainVerifications.every(
+      v => v.errors.length === 0
+    );
+    if (hasOffChainVerificationErrors) {
+      return res.status(400).json({
+        errors: offChainVerifications
+      });
+    }
+
+    // Verify the on-chain data integrity
+    const decodedDataAndLogs: {
+      shareData: IVerifiedData;
+      logs: TDecodedLog[];
+    }[] = [];
+    await Promise.all(
+      shareKitResData.data.map(async shareData => {
+        decodedDataAndLogs.push({
+          shareData,
+          logs: await getDecodedTxEventLogs(provider, shareData.tx)
+        });
+      })
+    );
+    const onChainVerifications = validateOnChainProperties(
+      shareKitResData.subject,
+      decodedDataAndLogs
+    );
+    if (onChainVerifications.length) {
+      return res.status(400).json({
+        errors: onChainVerifications
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      token: req.body.token
     });
   }
-
-  // Verify the off-chain data integrity of each data node
-  const offChainVerifications = shareKitResData.data.map(d => ({
-    layer2Hash: d.layer2Hash,
-    errors: shareKitUtil.verifyOffChainDataIntegrity(d)
-  }));
-  const hasOffChainVerificationErrors = !offChainVerifications.every(
-    v => v.errors.length === 0
-  );
-  if (hasOffChainVerificationErrors) {
-    return res.status(400).json({
-      errors: offChainVerifications
-    });
-  }
-
-  return res.status(200).json({
-    success: true,
-    token: req.body.token
-  });
-});
+);
