@@ -1,0 +1,25 @@
+{
+  "name": "receive-kit",
+  "version": "1.0.0",
+  "description": "Easily receive and validate data from users sharing their data via share-kit.",
+  "dependencies": {
+    "@bloomprotocol/attestations-lib": "^3.0.2",
+    "@bloomprotocol/share-kit": "^3.0.0",
+    "@types/lodash": "^4.14.119",
+    "dotenv": "^6.2.0",
+    "express": "^4.16.4",
+    "js-sha3": "^0.8.0",
+    "lodash": "^4.17.11"
+  },
+  "devDependencies": {
+    "@types/dotenv": "^6.1.0",
+    "@types/express": "^4.16.0",
+    "typescript": "^3.2.2"
+  },
+  "scripts": {
+    "start": "node build/index",
+    "dev": "node_modules/.bin/tsc && npm start"
+  },
+  "author": "Bloom Protocol",
+  "license": "GPL-3.0"
+}
