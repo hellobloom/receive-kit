@@ -218,6 +218,9 @@ app.post(
     // Ensure the structure of the JSON is formatted properly
     const reqFormatValidation = validateRequestFormat(req);
     if (reqFormatValidation.length) {
+      console.log(
+        `reqFormatValidation: ${JSON.stringify(reqFormatValidation)}`
+      );
       return res.status(400).json({ errors: reqFormatValidation });
     }
 
@@ -229,22 +232,28 @@ app.post(
       shareKitResData
     );
     if (basicOffChainValidation.length) {
+      console.log(
+        `basicOffChainValidation: ${JSON.stringify(basicOffChainValidation)}`
+      );
       return res.status(400).json({
         errors: basicOffChainValidation
       });
     }
 
     // Verify the off-chain data integrity of each data node
-    const offChainVerifications = shareKitResData.data.map(d => ({
+    const offChainValidation = shareKitResData.data.map(d => ({
       layer2Hash: d.layer2Hash,
       errors: shareKitUtil.verifyOffChainDataIntegrity(d)
     }));
-    const hasOffChainVerificationErrors = !offChainVerifications.every(
+    const hasOffChainVerificationErrors = !offChainValidation.every(
       v => v.errors.length === 0
     );
     if (hasOffChainVerificationErrors) {
+      console.log(
+        `offChainVerifications: ${JSON.stringify(offChainValidation)}`
+      );
       return res.status(400).json({
-        errors: offChainVerifications
+        errors: offChainValidation
       });
     }
 
@@ -261,13 +270,14 @@ app.post(
         });
       })
     );
-    const onChainVerifications = validateOnChainProperties(
+    const onChainValidation = validateOnChainProperties(
       shareKitResData.subject,
       decodedDataAndLogs
     );
-    if (onChainVerifications.length) {
+    if (onChainValidation.length) {
+      console.log(`onChainVerifications: ${JSON.stringify(onChainValidation)}`);
       return res.status(400).json({
-        errors: onChainVerifications
+        errors: onChainValidation
       });
     }
 
