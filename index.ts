@@ -47,35 +47,40 @@ const validateRequestFormat = (req: express.Request): TRequestFormatError[] => {
   if (isNullOrWhiteSpace(req.body.token)) {
     errors.push({
       key: "token",
-      message: "TODO"
+      message:
+        "Request body requires a non-whitespace 'token' property of type string."
     });
   }
 
   if (isNullOrWhiteSpace(req.body.subject)) {
     errors.push({
       key: "subject",
-      message: "TODO"
+      message:
+        "Request body requires a non-whitespace 'subject' property of type string."
     });
   }
 
   if (!(req.body.data instanceof Array) || !req.body.data.length) {
     errors.push({
       key: "data",
-      message: "TODO"
+      message:
+        "Request body requires a non-empty 'data' property of type Array."
     });
   }
 
   if (isNullOrWhiteSpace(req.body.packedData)) {
     errors.push({
       key: "packedData",
-      message: "TODO"
+      message:
+        "Request body requires a non-whitespace 'packedData' property of type string."
     });
   }
 
   if (isNullOrWhiteSpace(req.body.signature)) {
     errors.push({
       key: "signature",
-      message: "TODO"
+      message:
+        "Request body requires a non-whitespace 'signature' property of type string."
     });
   }
 
@@ -97,7 +102,11 @@ const validateBasicOffChainProperties = (shareKitResData: ResponseData) => {
   if (shareKitResData.subject !== signerEthAddress) {
     errors.push({
       key: "subject",
-      message: "TODO"
+      message:
+        "The recovered subject address based on the 'packedData' and 'signature'" +
+        " does not match the one that was shared." +
+        `\nShared subject address: '${shareKitResData.subject}'` +
+        `\nRecovered subject address: '${signerEthAddress}'`
     });
   }
 
@@ -109,10 +118,15 @@ const validateBasicOffChainProperties = (shareKitResData: ResponseData) => {
         token: shareKitResData.token
       })
     );
-  if (recoveredPackedData !== shareKitResData.packedData) {
+  if (shareKitResData.packedData !== recoveredPackedData) {
     errors.push({
       key: "packedData",
-      message: "TODO"
+      message:
+        "The recovered packed data hash computed by running 'keccak256' on an object" +
+        " containing the shared 'data' and 'token' does not match the 'packedData'" +
+        " that was shared." +
+        `\nShared packed data: '${shareKitResData.packedData}'` +
+        `\nRecovered packed data: '${recoveredPackedData}'`
     });
   }
 
@@ -135,48 +149,49 @@ const validateOnChainProperties = (
   const errors: TOnChainValidationError[] = [];
 
   decodedLogsAndData.forEach(dl => {
-    const traitAttestedLogs = dl.logs.find(l => l.name === "TraitAttested");
-    if (!traitAttestedLogs) {
+    // verify subject shared dataHash matches chain by using it as a part of the find logic
+    const matchingTraitAttestedLogs = dl.logs.find(
+      l =>
+        l.name === "TraitAttested" &&
+        getDecodedLogValueByName(l, "layer2Hash") === dl.shareData.layer2Hash
+    );
+    if (!matchingTraitAttestedLogs) {
       errors.push({
         key: "TraitAttested",
-        message: "TODO"
+        message:
+          "Unable to find 'TraitAttested' event logs with a" +
+          ` 'layer2Hash' of '${dl.shareData.layer2Hash}'.`
       });
       return;
     }
 
-    // verify subject address matches chain
+    // verify shared subject address matches chain
     const onChainSubjectAddress = getDecodedLogValueByName(
-      traitAttestedLogs,
+      matchingTraitAttestedLogs,
       "subject"
     );
     if (subject !== onChainSubjectAddress) {
       errors.push({
         key: "subject",
-        message: "TODO"
+        message:
+          "The on chain subject address does not match what was shared." +
+          `\nShared subject address: '${subject}'` +
+          `\nOn chain subject address: '${onChainSubjectAddress}'`
       });
     }
 
-    // verify subject shared attester matches chain
+    // verify shared attester address matches chain
     const onChainAttesterAddress = getDecodedLogValueByName(
-      traitAttestedLogs,
+      matchingTraitAttestedLogs,
       "attester"
     );
     if (dl.shareData.attester !== onChainAttesterAddress) {
       errors.push({
         key: "attester",
-        message: "TODO"
-      });
-    }
-
-    // verify subject shared dataHash matches chain
-    const onChainDataHash = getDecodedLogValueByName(
-      traitAttestedLogs,
-      "dataHash"
-    );
-    if (dl.shareData.layer2Hash !== onChainDataHash) {
-      errors.push({
-        key: "layer2Hash",
-        message: "TODO"
+        message:
+          "The on chain attester address does not match what was shared." +
+          `\nShared attester address: '${dl.shareData.attester}'` +
+          `\nOn chain attester address: '${onChainAttesterAddress}'`
       });
     }
   });
