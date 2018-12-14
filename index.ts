@@ -153,14 +153,14 @@ const validateOnChainProperties = (
     const matchingTraitAttestedLogs = dl.logs.find(
       l =>
         l.name === "TraitAttested" &&
-        getDecodedLogValueByName(l, "layer2Hash") === dl.shareData.layer2Hash
+        getDecodedLogValueByName(l, "dataHash") === dl.shareData.layer2Hash
     );
     if (!matchingTraitAttestedLogs) {
       errors.push({
         key: "TraitAttested",
         message:
           "Unable to find 'TraitAttested' event logs with a" +
-          ` 'layer2Hash' of '${dl.shareData.layer2Hash}'.`
+          ` 'dataHash' of '${dl.shareData.layer2Hash}'.`
       });
       return;
     }
