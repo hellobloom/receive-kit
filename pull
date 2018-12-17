@@ -1,6 +1,5 @@
 #!/bin/bash
 export MAX_MEM=${MAX_MEM:-1500}
-source './bin/shared/strict-mode.sh'
 
 git pull
 yarn
