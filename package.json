@@ -20,7 +20,8 @@
   },
   "scripts": {
     "start": "node build/index",
-    "dev": "node_modules/.bin/tsc && npm start"
+    "build": "node_modules/.bin/tsc",
+    "dev": "npm run build && npm start"
   },
   "author": "Bloom Protocol",
   "license": "GPL-3.0"
