@@ -2,7 +2,7 @@
 export MAX_MEM=${MAX_MEM:-1500}
 
 git pull
-yarn
+npm i
 npm run build
 forever stop build/index.js
 forever start -c node build/index.js
