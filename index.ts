@@ -5,7 +5,7 @@ import express from "express";
 import { ResponseData, util as shareKitUtil } from "@bloomprotocol/share-kit";
 import { IVerifiedData } from "@bloomprotocol/share-kit/dist/src/types";
 import { TDecodedLog, getDecodedTxEventLogs } from "./txUtils";
-import { sortObject } from "./utils";
+import { sortObject, isNullOrWhiteSpace } from "./utils";
 import {
   validateRequestFormat,
   validateBasicOffChainProperties,
@@ -71,18 +71,40 @@ app.post(
     }
 
     // Verify the on-chain data integrity
+    const txReceiptRetrievalErrors: {
+      layer2Hash: string;
+      error: string;
+    }[] = [];
     const decodedDataAndLogs: {
       shareData: IVerifiedData;
       logs: TDecodedLog[];
     }[] = [];
     await Promise.all(
-      shareKitResData.data.map(async shareData => {
-        decodedDataAndLogs.push({
-          shareData,
-          logs: await getDecodedTxEventLogs(provider, shareData.tx)
-        });
-      })
+      shareKitResData.data
+        .filter(d => !isNullOrWhiteSpace(d.tx) && d.tx !== "0x")
+        .map(async shareData => {
+          try {
+            decodedDataAndLogs.push({
+              shareData,
+              logs: await getDecodedTxEventLogs(provider, shareData.tx)
+            });
+          } catch (err) {
+            txReceiptRetrievalErrors.push({
+              layer2Hash: shareData.layer2Hash,
+              error: `${err}`
+            });
+          }
+        })
     );
+    if (txReceiptRetrievalErrors.length) {
+      console.log(
+        `txReceiptRetrievalErrors: ${JSON.stringify(txReceiptRetrievalErrors)}`
+      );
+      return res.status(400).json({
+        errors: txReceiptRetrievalErrors
+      });
+    }
+
     const onChainValidation = validateOnChainProperties(
       shareKitResData.subject,
       decodedDataAndLogs

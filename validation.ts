@@ -121,11 +121,13 @@ const validateOnChainProperties = (
 
   decodedLogsAndData.forEach(dl => {
     // verify subject shared dataHash matches chain by using it as a part of the find logic
-    const matchingTraitAttestedLogs = dl.logs.find(
-      l =>
-        l.name === "TraitAttested" &&
-        getDecodedLogValueByName(l, "dataHash") === dl.shareData.layer2Hash
-    );
+    const matchingTraitAttestedLogs =
+      dl.logs &&
+      dl.logs.find(
+        l =>
+          l.name === "TraitAttested" &&
+          getDecodedLogValueByName(l, "dataHash") === dl.shareData.layer2Hash
+      );
     if (!matchingTraitAttestedLogs) {
       errors.push({
         key: "TraitAttested",

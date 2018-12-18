@@ -23,6 +23,9 @@ export const getDecodedTxEventLogs = async (
   const httpProvider = new HttpProvider(provider);
   const ethClient = Eth.fromProvider(httpProvider);
   const txReceipt = await ethClient.getTransactionReceipt(txHash);
+  if (!txReceipt) {
+    throw Error(`Unable to retrieve transaction receipt for hash: '${txHash}'`);
+  }
   return abiDecoder.decodeLogs(txReceipt.logs) as TDecodedLog[];
 };
 
