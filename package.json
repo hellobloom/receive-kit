@@ -19,7 +19,8 @@
     "typescript": "^3.2.2"
   },
   "scripts": {
-    "start": "node build/index",
+    "postinstall": "npm run build",
+    "start": "node build/index.js",
     "build": "node_modules/.bin/tsc",
     "dev": "npm run build && npm start"
   },
