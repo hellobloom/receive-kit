@@ -105,15 +105,22 @@ app.post(
       });
     }
 
-    const onChainValidation = validateOnChainProperties(
-      shareKitResData.subject,
-      decodedDataAndLogs
-    );
-    if (onChainValidation.length) {
-      console.log(`onChainVerifications: ${JSON.stringify(onChainValidation)}`);
-      return res.status(400).json({
-        errors: onChainValidation
-      });
+    if (
+      typeof process.env.VALIDATE_ON_CHAIN === "string" &&
+      process.env.VALIDATE_ON_CHAIN.toLowerCase() === "true"
+    ) {
+      const onChainValidation = validateOnChainProperties(
+        shareKitResData.subject,
+        decodedDataAndLogs
+      );
+      if (onChainValidation.length) {
+        console.log(
+          `onChainVerifications: ${JSON.stringify(onChainValidation)}`
+        );
+        return res.status(400).json({
+          errors: onChainValidation
+        });
+      }
     }
 
     return res.status(200).json({
