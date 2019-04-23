@@ -4,7 +4,7 @@
   "description": "Easily receive and validate data from share-kit.",
   "dependencies": {
     "@bloomprotocol/attestations-lib": "^3.0.3",
-    "@bloomprotocol/share-kit": "^3.0.1",
+    "@bloomprotocol/share-kit": "^4.1.0",
     "@types/lodash": "^4.14.119",
     "abi-decoder": "^1.2.0",
     "dotenv": "^6.2.0",
