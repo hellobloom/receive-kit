@@ -2,7 +2,6 @@ import * as dotenv from 'dotenv'
 dotenv.config()
 import express, { ErrorRequestHandler } from 'express'
 import { validateUntypedResponseData } from '@bloomprotocol/verify-kit'
-
 const app = express()
 const port = process.env.PORT
 if (!port) {
