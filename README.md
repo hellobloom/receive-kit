@@ -1,3 +1,7 @@
+:warning: **_Notice_** :warning:
+
+This library is no longer maintained.
+
 # Receive Kit
 
 Easily receive, validate, and further process data from [share-kit](https://github.com/hellobloom/share-kit).
